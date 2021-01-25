@@ -21,14 +21,15 @@ import ini_creator
 
 
 class PSUParser:
-    def __init__(self, login: str, password: str, conf_file: str = None):
+    def __init__(self, login: str, password: str, conf_file_name: str = ''):
         self.TIMETABLE_URL = 'pls/stu_cus_et/stu.timetable/'
 
         self.requester = PSURequester(login, password)
-        if not conf_file:
-            conf_file = ini_creator.write_config_to_file()
+        if not conf_file_name or not os.path.exists(conf_file_name):
+            print("No config found")
+            conf_file_name = ini_creator.write_config_to_file()
         self.config = ConfigParser()
-        self.config.read(conf_file)
+        self.config.read(conf_file_name)
 
     def set_timetable_to_calendar(self):
         # Get html source of timetable webpage
@@ -114,6 +115,7 @@ class PSUParser:
                                                     type_of_lesson,
                                                     subject,
                                                     fallback='')
+                            print(type_of_lesson, ' ', subject, ' ', event_description)
                             classroom = lesson.find(
                                 'span',
                                 attrs={'class': 'aud'}
@@ -139,11 +141,11 @@ class PSUParser:
                             # print(1, ' ', event['start']['dateTime'])
                             old_event_start = datetime.strptime(
                                 event['start']['dateTime'],
-                                '%Y-%m-%dT%H:%M:%SZ'
+                                '%Y-%m-%dT%H:%M:%S+05:00'
                             )
-                            old_event_start = old_event_start.replace(
-                                hour=(old_event_start.hour + 5)
-                            )
+                            #old_event_start = old_event_start.replace(
+                             #   hour=(old_event_start.hour + 5)
+                            #)
                             if (event['summary'] == event_summary and
                                     old_event_start.isoformat('T') + '+05:00'
                                     == event_start_time and

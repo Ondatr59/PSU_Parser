@@ -12,6 +12,9 @@ conf_dict = {
         'Теория вероятностей и математическая статистика': 'Тервер',
         'Иностранный язык (английский) [Базовый уровень]': 'ИнЯз',
         'Операционные системы II': 'ОС 2',
+        'Обыкновенные дифференциальные уравнения': 'ОДУ',
+        'Современные языки и технологии программирования': 'СЯТ',
+        'Интеллектуальные системы': 'ИС',
     },
     'ClassesStartEnd': {
         'start1': '08:00:00',
@@ -36,28 +39,20 @@ conf_dict = {
     },
     'Lectures': {
         'color': 7,
-        'системное и прикладное программное обеспечение': 'https://bbb7.psu.ru/b/dat-ghx-74y',
-        'математический анализ': 'https://bbb11.psu.ru/b/lev-jya-pje',
-        'операционные системы ii': 'https://us04web.zoom.us/j/74129488551?pwd=RWdTWHhsYTFSL21qR3JZRDJRLzl1QT09'
-	                                'Meeting ID: 741 2948 8551'
-	                                'Passcode: 2AxKsz',
-        'теория вероятностей и математическая статистика': 'https://bbb5.psu.ru/b/chi-tgm-xvm',
-        'дискретная математика [ит]': 'https://us02web.zoom.us/j/89084840750?pwd=bnhEWExoM3RNTmp1N2RZT245Q2trdz09'
-	                                   'Идентификатор конференции: 890 8484 0750'
-	                                   'Код доступа: 830608',
-        'языки программирования': 'https://bbb7.psu.ru/b/zal-4j6-utm'
+        'Современные языки и технологии программирования': 'https://bbb17.psu.ru/b/gor-flv-bnn-6yn',
+	'Интеллектуальные системы': 'https://zoom.us/j/8967849374',
     },
     'LabLessons': {
         'color': 5,
+	'Интеллектуальные системы': 'https://zoom.us/j/8967849374',
+	'Современные языки и технологии программирования': 'https://moodle.movs.psu.ru/ \n'
+	'https://us02web.zoom.us/j/82709251785?pwd=WVdJYmNBRHZHQWRYUTRFdjdiYm9vQT09',
     },
     'PracticalLessons': {
         'color': 6,
-        'дискретная математика [ит]': 'https://us02web.zoom.us/j/82036883528',
-        'физическая культура': 'https://us04web.zoom.us/j/73066239279?pwd=aG43THdNKzNXck5Ib2diL0VSQTlTUT09',
-        'языки программирования': 'https://us04web.zoom.us/j/7499908231?pwd=YzJGQlRzVGwxTUQ1akh0RlExK2NYUT09',
-        'операционные системы ii': 'https://bbb13.psu.ru/b/lab-hy3-v9a',
-        'теория вероятностей и математическая статистика' : 'https://bbb8.psu.ru/b/bal-zjq-e2e',
-        'математический анализ': 'Discord'
+        'Философия': 'https://us04web.zoom.us/j/76116048738?pwd=QnEwTWt2Q2srQUhNQnBsT082SWEvQT09',
+        'Современные языки и технологии программирования': 'https://bbb14.psu.ru/b/gor-dsi-wkw-hxp',
+	'Интеллектуальные системы': 'https://zoom.us/j/8967849374',
     },
     'Consultations': {
         'color': 3,
