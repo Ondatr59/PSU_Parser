@@ -1,6 +1,5 @@
 # Import modules for work with web and html
 import requests
-# from seleniumwire import webdriver
 from selenium import webdriver
 from selenium.common.exceptions import *
 from bs4 import BeautifulSoup
@@ -14,22 +13,28 @@ from google.auth.transport.requests import Request
 from time import time, sleep, strftime
 import os.path
 import pickle
+from zipfile import ZipFile
 from datetime import datetime
-from typing import *
 from configparser import ConfigParser
+from typing import *
+import re
 import ini_creator
 
 
 class PSUParser:
-    def __init__(self, login: str, password: str, conf_file_name: str = ''):
+    def __init__(self, login: str, password: str, conf_filename: str = ''):
         self.TIMETABLE_URL = 'pls/stu_cus_et/stu.timetable/'
-
-        self.requester = PSURequester(login, password)
-        if not conf_file_name or not os.path.exists(conf_file_name):
+        if not conf_filename or not os.path.exists(conf_filename):
             print("No config found")
             conf_file_name = ini_creator.write_config_to_file()
+        self.conf_filename = conf_filename
         self.config = ConfigParser()
-        self.config.read(conf_file_name)
+        self.config.read(conf_filename)
+
+        self.requester = PSURequester(
+            login, password,
+            int(self.config['ProgData']['timeout_start'])
+        )
 
     def set_timetable_to_calendar(self):
         # Get html source of timetable webpage
@@ -39,6 +44,9 @@ class PSUParser:
 
         # '!' means 'error'
         if page_source[0] == '!':
+            if page_source == '!Login failed':
+                self.config['ProgData']['timeout_start'] = str(int(time()))
+                self.config.write(open(self.conf_filename, 'w'))
             return page_source
 
         # Create Google Calendar service (Google API)
@@ -115,7 +123,6 @@ class PSUParser:
                                                     type_of_lesson,
                                                     subject,
                                                     fallback='')
-                            print(type_of_lesson, ' ', subject, ' ', event_description)
                             classroom = lesson.find(
                                 'span',
                                 attrs={'class': 'aud'}
@@ -137,8 +144,7 @@ class PSUParser:
                                           + '+05:00')
 
                         create_new_event = True
-                        for event in old_lessons:
-                            # print(1, ' ', event['start']['dateTime'])
+                        for event in old_lessons:   
                             old_event_start = datetime.strptime(
                                 event['start']['dateTime'],
                                 '%Y-%m-%dT%H:%M:%S+05:00'
@@ -158,6 +164,8 @@ class PSUParser:
                                 break
 
                         if create_new_event:
+                            print('New lesson: ', event_summary, ' - ',
+                                  event_start_time, ', ', event_description)
                             event = service.events().insert(
                                 calendarId=calendar_id,
                                 body={
@@ -179,6 +187,8 @@ class PSUParser:
                                     ]
                                 }).execute()
                 for event in old_lessons:
+                    print('Lesson deleted: ', event['summary'], '-',
+                          event['start']['datetime'], event['description'])
                     service.events().delete(calendarId=calendar_id,
                                             eventId=event['id']).execute()
 
@@ -211,19 +221,10 @@ class PSUParser:
                 pickle.dump(creds, token)
         return creds
 
-    def timetable_to_dicts(self):
-        page_source = self.requester.get_page(self.TIMETABLE_URL)
-
-        if page_source[0] == '!':
-            return page_source
-
-        page = BeautifulSoup(page_source, 'html5lib')
-        res = []
-
 
 class PSURequester:
 
-    def __init__(self, login: str, password: str):
+    def __init__(self, login: str, password: str, timeout_start: int):
         self.LOGIN = login
         self.PASSWORD = password
         self.MAIN_URL = 'https://student.psu.ru/'
@@ -234,32 +235,19 @@ class PSURequester:
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,'
                       '*/*;q=0.8,application/signed-exchange;v=b3;q=0.9'}
 
-        self.config = ConfigParser()
-
-        self.timeout_start = 0
-
-        # self.login()
+        self.timeout_start = timeout_start
 
     def login(self):
-        if time() - self.timeout_start < 600:
-            # If loginnig happens during 10-minutes login timeout
-            # (after 5 unsuccessful login attempts), abort the method
+        # No browser: selenium.common.exceptions.SessionNotCreatedException: Message: Unable to find a matching set of capabilities
+        # Wrong version: selenium.common.exceptions.SessionNotCreatedException: Message: session not created: This version of ChromeDriver only supports Chrome version 89
+        # Current browser version is 88.0.4324.150 with binary path C:\Program Files (x86)\Google\Chrome\Application\chrome.exe
+
+        driver = self.setup_chromedriver()
+        if not driver:
+            driver = self.setup_geckodriver()
+        if not driver:
             return 1
-        if self.timeout_start:
-            # If timeout has been started more that 10 minutes ago,
-            # nullify it
-            self.timeout_start = 0
 
-        try:
-            options = webdriver.ChromeOptions()
-            options.headless = False
-            driver = webdriver.Chrome(options=options)
-        except:
-            options = webdriver.FirefoxOptions()
-            options.headless = False
-            driver = webdriver.Firefox(options=options)
-
-            # executable_path=r'/home/ondatr/pythonProjects/psu_parser/PSU_Parser/geckodriver') as driver:
         driver.implicitly_wait(3)
         driver.get(self.MAIN_URL)
 
@@ -269,15 +257,10 @@ class PSURequester:
         driver.find_element_by_id('password').send_keys(self.PASSWORD)
         driver.find_element_by_id('sbmt').click()
 
-        '''self.selenium_funcs_without_stale_exc(driver.find_element_by_id('login').send_keys, self.LOGIN)
-        self.selenium_funcs_without_stale_exc(driver.find_element_by_id('password').send_keys, self.PASSWORD)
-        self.selenium_funcs_without_stale_exc(driver.find_element_by_id('sbmt').click)'''
-
         try:
             # If authorization happened with an error,
             # start counting the 10-minutes timeout
             driver.find_element_by_class_name('error_message')
-            self.timeout_start = time()
             return 1
         except NoSuchElementException:
             # Else copy cookies from webdriver to main requests session
@@ -287,14 +270,28 @@ class PSURequester:
             return 0
 
     def get_page(self, url: str = ''):
+        # FIXME
+        if self.timeout_start:
+            if time() - self.timeout_start < 600:
+                # If request happens during 10-minutes login timeout
+                # (after 5 unsuccessful login attempts), abort the method
+                return ('!Login timeout, '
+                        + str(600 - int(time() - self.timeout_start))
+                        + ' seconds remain')
+            else:
+                # If timeout has been started more that 10 minutes ago,
+                # nullify it
+                self.timeout_start = 0
+
         res = self.ses.get(self.MAIN_URL + url)
-        open('test.html', 'w').write(res.text)
         soup = BeautifulSoup(res.text, 'html5lib')
+        # TODO: проверить будет ли таймаут без автологина
         if soup.find('div', attrs={'class': 'login'}):
-            print('login')
+            print('Login...')
             login_error = self.login()
             if login_error:
-                return '!Login failed.'
+                self.timeout_start = time()
+                return '!Login failed'
             res = self.ses.get(self.MAIN_URL + url)
         return res.text
 
@@ -304,13 +301,53 @@ class PSURequester:
             c.pop('httpOnly')
             self.ses.cookies.set_cookie(requests.cookies.create_cookie(**c))
 
-    def selenium_funcs_without_stale_exc(self, func, *args):
-        for attempt in range(50):
-            print(attempt)
-            try:
-                return func(*args)
-            except StaleElementReferenceException:
-                sleep(0.1)
+    def setup_chromedriver(self):
+        try:
+            options = webdriver.ChromeOptions()
+            options.headless = True
+            driver = webdriver.Chrome(options=options)
+        except Exception as ex:
+            if 'This version of' in str(ex):
+                browser_version = re.search(
+                    r'Current browser version is (\d+)',
+                    str(ex)
+                ).group(1)
+                print(f'Your version of ChromeDrive doesn\'t match with '
+                      f'browser version ({browser_version}...)\n'
+                      f'Downloading of necessary version...')
+
+                page_source = requests.get('https://chromedriver.chromium.org/downloads').text
+
+                driver_version = re.search(
+                    rf'ChromeDriver ({browser_version}(\.|\d)*)', page_source
+                ).group(1)
+                open('chromedriver.zip', 'wb').write(
+                    requests.get(
+                        'https://chromedriver.storage.googleapis.com/'
+                        + driver_version + '/chromedriver_win32.zip'
+                    ).content
+                )
+                ZipFile('chromedriver.zip', 'r').extractall()
+                os.remove('chromedriver.zip')
+
+                try:
+                    options = webdriver.ChromeOptions()
+                    options.headless = True
+                    return webdriver.Chrome(options=options)
+                except:
+                    return None
+            else:
+                return None
+        else:
+            return driver
+
+    def setup_geckodriver(self):
+        try:
+            options = webdriver.FirefoxOptions()
+            options.headless = True
+            return webdriver.Firefox(options=options)
+        except:
+            return None
 
     def __del__(self):
         self.ses.close()

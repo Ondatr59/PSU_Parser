@@ -84,22 +84,14 @@ conf_dict = {
 config = ConfigParser()
 config.read_dict(conf_dict)
 
+
 def write_config_to_file():
     config.write(open('config.ini', 'w'))
     return 'config.ini'
+    
 
 def get_default_config():
     return config
-
-
-'''login_data = ConfigParser()
-login_data.read_dict({
-    'LoginData': {
-        'login': '',
-        'password': ''
-    }
-})'''
-#login_data.write(open('login_data.ini', 'w'))
 
 
 if __name__ == '__main__':
