@@ -1,0 +1,12 @@
+.idea/
+__pycache__/
+venv/
+
+chromedriver.exe
+geckodriver.exe
+token.pickle
+
+*.log
+*.ini
+
+*test.py

@@ -120,9 +120,8 @@ class PSUParser:
                             classroom = 'Дист'
                         else:
                             event_description = self.config.get(
-                                                    type_of_lesson,
-                                                    subject,
-                                                    fallback='')
+                                type_of_lesson, subject, fallback=''
+                            )
                             classroom = lesson.find(
                                 'span',
                                 attrs={'class': 'aud'}
