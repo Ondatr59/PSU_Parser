@@ -26,7 +26,8 @@ class PSUParser:
         self.TIMETABLE_URL = 'pls/stu_cus_et/stu.timetable/'
         if not conf_filename or not os.path.exists(conf_filename):
             print("No config found")
-            conf_file_name = ini_creator.write_config_to_file()
+            conf_filename = ini_creator.write_config_to_file()
+            print("Default config created")
         self.conf_filename = conf_filename
         self.config = ConfigParser()
         self.config.read(conf_filename)
@@ -41,6 +42,9 @@ class PSUParser:
         url = self.TIMETABLE_URL + '?p_cons=y&p_week='
 
         page_source = self.requester.get_page(url)
+        
+        self.config['ProgData']['LastCode'] = page_source[0:10]
+        self.config.write(open(self.conf_filename, 'w'))
 
         # '!' means 'error'
         if page_source[0] == '!':
@@ -148,16 +152,11 @@ class PSUParser:
                                 event['start']['dateTime'],
                                 '%Y-%m-%dT%H:%M:%S+05:00'
                             )
-                            #old_event_start = old_event_start.replace(
-                             #   hour=(old_event_start.hour + 5)
-                            #)
-                            if (event['summary'] == event_summary and
-                                    old_event_start.isoformat('T') + '+05:00'
-                                    == event_start_time and
-                                        (event_description
-                                        == event.get('description') or
-                                        event_description == '' and
-                                        event.get('description') == None)):
+                            if (event['summary'] == event_summary
+                                and old_event_start.isoformat('T') + '+05:00'== event_start_time
+                                and (event_description == event.get('description')
+                                     or event_description == ''
+                                     and not event.get('description'))):
                                 old_lessons.remove(event)
                                 create_new_event = False
                                 break
@@ -187,7 +186,7 @@ class PSUParser:
                                 }).execute()
                 for event in old_lessons:
                     print('Lesson deleted: ', event['summary'], '-',
-                          event['start']['datetime'], event['description'])
+                          event['start']['dateTime'], event['description'])
                     service.events().delete(calendarId=calendar_id,
                                             eventId=event['id']).execute()
 
@@ -197,11 +196,14 @@ class PSUParser:
             page = BeautifulSoup(page_source, 'html5lib')
             if not page.find('div', attrs={'class': 'timetable'}):
                 cur_week = 0
+                
+        self.config['ProgData']['LastUseTime'] = datetime.now().strftime('pres-%Y-%m-%dT%H:%M:%S')
+        self.config.write(open(self.conf_filename, 'w'))
 
-        return '\n'
+        return 'Completed'
 
     def login_into_google(self):
-        SCOPES = ['https://www.googleapis.com/auth/calendar']
+        scopes = ['https://www.googleapis.com/auth/calendar']
 
         creds = None
         if os.path.exists('token.pickle'):
@@ -213,7 +215,7 @@ class PSUParser:
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     'client_secret.json',
-                    SCOPES)
+                    scopes)
                 creds = flow.run_local_server(port=0)
             # Save the credentials for the next run
             with open('token.pickle', 'wb') as token:
@@ -229,18 +231,17 @@ class PSURequester:
         self.MAIN_URL = 'https://student.psu.ru/'
         self.ses = requests.Session()
         self.ses.headers = {
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/84.0.4147.125 YaBrowser/20.8.2.92 Yowser/2.5 Safari/537.36}',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,'
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/84.0.4147.125 YaBrowser/20.8.2.92 '
+                          'Yowser/2.5 Safari/537.36}',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,'
+                      'image/webp,image/apng,'
                       '*/*;q=0.8,application/signed-exchange;v=b3;q=0.9'}
 
         self.timeout_start = timeout_start
 
     def login(self):
-        # No browser: selenium.common.exceptions.SessionNotCreatedException: Message: Unable to find a matching set of capabilities
-        # Wrong version: selenium.common.exceptions.SessionNotCreatedException: Message: session not created: This version of ChromeDriver only supports Chrome version 89
-        # Current browser version is 88.0.4324.150 with binary path C:\Program Files (x86)\Google\Chrome\Application\chrome.exe
-
         driver = self.setup_chromedriver()
         if not driver:
             driver = self.setup_geckodriver()
@@ -269,7 +270,6 @@ class PSURequester:
             return 0
 
     def get_page(self, url: str = ''):
-        # FIXME
         if self.timeout_start:
             if time() - self.timeout_start < 600:
                 # If request happens during 10-minutes login timeout
@@ -311,7 +311,7 @@ class PSURequester:
                     r'Current browser version is (\d+)',
                     str(ex)
                 ).group(1)
-                print(f'Your version of ChromeDrive doesn\'t match with '
+                print(f'Your version of ChromeDrive doesn`t match with '
                       f'browser version ({browser_version}...)\n'
                       f'Downloading of necessary version...')
 
