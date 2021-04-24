@@ -81,10 +81,15 @@ class PSUParser:
         # Parse html code
         page = BeautifulSoup(page_source, 'html5lib')
 
-        cur_week = int(page.find(
-            'li', attrs={'class': 'week theory current'}
-        ).text)
-        while cur_week:
+        # Find current week number
+        cur_week = page.find('li', attrs={'class': 'week theory current'})
+        if not cur_week:
+            cur_week = page.find('li', attrs={'class': 'week theory current'})
+        if not cur_week:
+            return "!Parse error"
+        cur_week_i = int(cur_week.text)
+
+        while cur_week_i:
             for day in page.find_all('div', attrs={'class': 'day'}):
                 # Format of 'date' - day_of_week day month
                 date = day.find('h3').text.split(' ')
@@ -187,15 +192,14 @@ class PSUParser:
                 for event in old_lessons:
                     print('Lesson deleted: ', event['summary'], '-',
                           event['start']['dateTime'], event['description'])
-                    service.events().delete(calendarId=calendar_id,
-                                            eventId=event['id']).execute()
+                    service.events().delete(calendarId=calendar_id, eventId=event['id']).execute()
 
             # Go to the next week, if it isn't the last one
-            cur_week += 1
-            page_source = self.requester.get_page(url + str(cur_week))
+            cur_week_i += 1
+            page_source = self.requester.get_page(url + str(cur_week_i))
             page = BeautifulSoup(page_source, 'html5lib')
             if not page.find('div', attrs={'class': 'timetable'}):
-                cur_week = 0
+                cur_week_i = 0
                 
         self.config['ProgData']['LastUseTime'] = datetime.now().strftime('pres-%Y-%m-%dT%H:%M:%S')
         self.config.write(open(self.conf_filename, 'w'))
