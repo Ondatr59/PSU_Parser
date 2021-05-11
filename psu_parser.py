@@ -191,7 +191,8 @@ class PSUParser:
                                 }).execute()
                 for event in old_lessons:
                     print('Lesson deleted: ', event['summary'], '-',
-                          event['start']['dateTime'], event['description'])
+                          event['start']['dateTime'],
+                          event['description'] if event.get('description') else '')
                     service.events().delete(calendarId=calendar_id, eventId=event['id']).execute()
 
             # Go to the next week, if it isn't the last one
@@ -265,6 +266,7 @@ class PSURequester:
             # If authorization happened with an error,
             # start counting the 10-minutes timeout
             driver.find_element_by_class_name('error_message')
+            open(' last_error_page.html', 'w').write(driver.page_source)
             return 1
         except NoSuchElementException:
             # Else copy cookies from webdriver to main requests session
@@ -282,8 +284,7 @@ class PSURequester:
                         + str(600 - int(time() - self.timeout_start))
                         + ' seconds remain')
             else:
-                # If timeout has been started more that 10 minutes ago,
-                # nullify it
+                # If timeout has been started more that 10 minutes ago, nullify it
                 self.timeout_start = 0
 
         res = self.ses.get(self.MAIN_URL + url)
