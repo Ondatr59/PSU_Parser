@@ -113,9 +113,12 @@ class PSUParser:
                         pair_num = lesson.find('td', attrs={'pair_num'}).text
                         lesson_num = pair_num[:pair_num.index(' ')]
 
-                        dis = lesson.find(
-                            'span',
-                            attrs={'class': 'dis'}).find('a').text
+                        dis_tag = lesson.find('span', attrs={'class': 'dis'})
+                        dis_a_tag = dis_tag.find('a')
+                        if dis_a_tag:
+                            dis = dis_a_tag.text
+                        else:
+                            dis = dis_tag.text[0:-2]
                         subject = dis[0:dis.rfind('(') - 1]
                         type_of_lesson = self.config['LessonTypes'][
                             dis[dis.rfind('(') + 1:-1]
