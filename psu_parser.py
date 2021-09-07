@@ -82,9 +82,9 @@ class PSUParser:
         page = BeautifulSoup(page_source, 'html5lib')
 
         # Find current week number
-        cur_week = page.find('li', attrs={'class': 'week theory current'})
+        cur_week = page.find('li', attrs={'class': re.compile('week .* current')})
         if not cur_week:
-            cur_week = page.find('li', attrs={'class': 'week theory current'})
+            cur_week = page.find('li', attrs={'class': re.compile('week .*')})
         if not cur_week:
             return "!Parse error"
         cur_week_i = int(cur_week.text)
@@ -109,9 +109,8 @@ class PSUParser:
 
                 for lesson in day.find_all('tr'):
                     # If this lesson isn't empty
-                    if (lesson.find('span', attrs={'class': 'dis'}) and
-                            lesson.find('span',
-                                        attrs={'class': 'dis'}).find('a')):
+                    if (lesson.find('span', attrs={'class': 'dis'}) 
+                       and lesson.find('span', attrs={'class': 'dis'}).find('a')):
                         pair_num = lesson.find('td', attrs={'pair_num'}).text
                         lesson_num = pair_num[:pair_num.index(' ')]
 
@@ -262,12 +261,13 @@ class PSURequester:
         driver.find_element_by_id('password').send_keys(self.PASSWORD)
         driver.find_element_by_id('sbmt').click()
 
+        result_code = 0
         try:
             # If authorization happened with an error,
             # start counting the 10-minutes timeout
             driver.find_element_by_class_name('error_message')
             open(' last_error_page.html', 'w').write(driver.page_source)
-            return 1
+            result_code = 1
         except NoSuchElementException:
             # Else copy cookies from webdriver to main requests session
             self.ses.cookies.clear()
