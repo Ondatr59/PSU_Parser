@@ -109,8 +109,7 @@ class PSUParser:
 
                 for lesson in day.find_all('tr'):
                     # If this lesson isn't empty
-                    if (lesson.find('span', attrs={'class': 'dis'}) 
-                       and lesson.find('span', attrs={'class': 'dis'}).find('a')):
+                    if lesson.find('span', attrs={'class': 'dis'}):
                         pair_num = lesson.find('td', attrs={'pair_num'}).text
                         lesson_num = pair_num[:pair_num.index(' ')]
 
@@ -252,10 +251,8 @@ class PSURequester:
         if not driver:
             return 1
 
-        driver.implicitly_wait(3)
+        driver.implicitly_wait(10)
         driver.get(self.MAIN_URL)
-
-        sleep(1)
 
         driver.find_element_by_id('login').send_keys(self.LOGIN)
         driver.find_element_by_id('password').send_keys(self.PASSWORD)
