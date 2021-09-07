@@ -273,7 +273,9 @@ class PSURequester:
             self.ses.cookies.clear()
             self.set_cookies_to_session(driver.get_cookies())
             # self.ses.headers = driver.requests[0].headers
-            return 0
+        driver.close()
+        driver.quit()
+        return result_code
 
     def get_page(self, url: str = ''):
         if self.timeout_start:
