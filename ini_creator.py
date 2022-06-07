@@ -86,7 +86,7 @@ config.read_dict(conf_dict)
 
 
 def write_config_to_file():
-    config.write(open('config.ini', 'w'))
+    config.write(open('config.ini', 'w', encoding='utf-8'))
     return 'config.ini'
     
 

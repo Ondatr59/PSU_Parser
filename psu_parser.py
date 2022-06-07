@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Import modules for work with web and html
 import requests
 from selenium import webdriver
@@ -30,7 +31,7 @@ class PSUParser:
             print("Default config created")
         self.conf_filename = conf_filename
         self.config = ConfigParser()
-        self.config.read(conf_filename)
+        self.config.read(conf_filename, encoding='utf-8')
 
         self.requester = PSURequester(
             login, password,
@@ -42,15 +43,12 @@ class PSUParser:
         url = self.TIMETABLE_URL + '?p_cons=y&p_week='
 
         page_source = self.requester.get_page(url)
-        
-        self.config['ProgData']['LastCode'] = page_source[0:10]
-        self.config.write(open(self.conf_filename, 'w'))
 
         # '!' means 'error'
         if page_source[0] == '!':
             if page_source == '!Login failed':
                 self.config['ProgData']['timeout_start'] = str(int(time()))
-                self.config.write(open(self.conf_filename, 'w'))
+                self.config.write(open(self.conf_filename, 'w', encoding='utf-8'))
             return page_source
 
         # Create Google Calendar service (Google API)
@@ -120,6 +118,9 @@ class PSUParser:
                         else:
                             dis = dis_tag.text[0:-2]
                         subject = dis[0:dis.rfind('(') - 1]
+                        if 'Консультация' in dis:
+                            continue
+                        
                         type_of_lesson = self.config['LessonTypes'][
                             dis[dis.rfind('(') + 1:-1]
                         ]
@@ -203,8 +204,8 @@ class PSUParser:
             if not page.find('div', attrs={'class': 'timetable'}):
                 cur_week_i = 0
                 
-        self.config['ProgData']['LastUseTime'] = datetime.now().strftime('pres-%Y-%m-%dT%H:%M:%S')
-        self.config.write(open(self.conf_filename, 'w'))
+        self.config['ProgData']['LastUseTime'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+        self.config.write(open(self.conf_filename, 'w', encoding="uft-8"))
 
         return 'Completed'
 
@@ -266,7 +267,6 @@ class PSURequester:
             # If authorization happened with an error,
             # start counting the 10-minutes timeout
             driver.find_element_by_class_name('error_message')
-            open(' last_error_page.html', 'w').write(driver.page_source)
             result_code = 1
         except NoSuchElementException:
             # Else copy cookies from webdriver to main requests session
